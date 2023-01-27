@@ -70,6 +70,7 @@ func CreateCounter(ctx context.Context) chan int {
 			default:
 				destination <- counter
 				counter++
+				time.Sleep(1 * time.Second) // slow simulation
 			}
 		}
 	}()
@@ -94,6 +95,51 @@ func TestContextWithCancel(t *testing.T) {
 
 	// Sending cancel signal to context to avoid goroutine leak
 	cancel()
+
+	time.Sleep(2 * time.Second)
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+
+}
+func TestContextWithTimeout(t *testing.T) {
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+
+	parent := context.Background()
+
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	defer cancel() // will always cancel the context even the process is end before timeout
+
+	destination := CreateCounter(ctx)
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+
+	for n := range destination {
+		fmt.Println("Counter", n)
+		if n == 10 {
+			break
+		}
+	}
+
+	time.Sleep(2 * time.Second)
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+}
+
+func TestContextWithDeadline(t *testing.T) {
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+
+	parent := context.Background()
+
+	// Will timeout with define time => 5 second from time.Now()
+	ctx, cancel := context.WithDeadline(parent, time.Now().Add(5*time.Second))
+	defer cancel() //
+
+	destination := CreateCounter(ctx)
+	fmt.Println("Total Goroutine", runtime.NumGoroutine())
+
+	for n := range destination {
+		fmt.Println("Counter", n)
+		if n == 10 {
+			break
+		}
+	}
 
 	time.Sleep(2 * time.Second)
 	fmt.Println("Total Goroutine", runtime.NumGoroutine())
